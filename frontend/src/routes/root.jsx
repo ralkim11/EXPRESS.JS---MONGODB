@@ -3,12 +3,29 @@ import { Outlet, NavLink, useLoaderData, Form, redirect, useNavigation, useSubmi
 import { getContacts, createContact } from "../contacts";
 
 // Asynchronous function named 'action' that creates a new contact and redirects to its edit page
-export async function action() {
+/*export async function action() {
   // Creating a new contact and retrieving its details
   const contact = await createContact();
   
   // Redirecting to the edit page of the newly created contact
   return redirect(`/contacts/${contact.id}/edit`);
+}*/
+
+export async function action() {
+  // Creating a new contact and retrieving its details
+  const contact = await createContact();
+
+  // Check if the 'contact' object exists and has an 'id' property
+  if (contact && contact.id) {
+    // Redirecting to the edit page of the newly created contact
+    return redirect(`/contacts/${contact.id}/edit`);
+  } else {
+    // Handle the case where 'contact' is null or does not have an 'id' property
+    console.error("Error: Contact object is null or missing 'id' property");
+    // You may choose to handle this error differently, such as redirecting to an error page
+    // For now, let's redirect back to the root page
+    return redirect("/");
+  }
 }
 
 // Asynchronous function named 'loader' that loads data before rendering the component
@@ -84,8 +101,8 @@ export default function Root() {
           {contacts.length ? (
             <ul>
               {contacts.map((contact) => (
-                <li key={contact.id}>
-                  <NavLink to={`contacts/${contact.id}`}>
+                <li key={contact._id}>
+                  <NavLink to={`contacts/${contact._id}`}>
                     {contact.first || contact.last ? (
                       <>
                         {contact.first} {contact.last}
