@@ -1,66 +1,148 @@
-// src/routes/contactRoutes.js
 const express = require('express');
-const router = express.Router();
-const Contact = require('../models/contactModels');
+const Contact = require('../models/contactModels')
+const bodyParser = require('body-parser')
 
-// Create a new contact
-router.post('/', async (req, res) => {
-  try {
-    const newContact = await Contact.create(req.body);
-    res.status(201).json(newContact);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+const contact_router = express();
+contact_router.use(bodyParser.urlencoded({ extended: false }));
 
-// Get all contacts
-router.get('/', async (req, res) => {
-  try {
-    const contacts = await Contact.find();
-    res.status(200).json(contacts);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Get a single contact by ID
-router.get('/:id', async (req, res) => {
-  try {
-    const contact = await Contact.findById(req.params.id);
-    if (!contact) {
-      return res.status(404).json({ message: 'Contact not found' });
+//Get all contacts
+contact_router.get("/contact/all", async (req, res) => {
+    try {
+        await Contact.find().then((contacts) => {
+            if (contacts.length <= 0) {
+                res.status(200).json({
+                    success: false,
+                    message: "No contacts to display.",
+                });
+            } else {
+                res.status(200).json({
+                    success: true,
+                    message: "contacts found.",
+                    contacts: contacts,
+                });
+            }
+        });
+    } catch (error) {
+        return res.status(400).json({
+            success: false,
+            message: error.message,
+        });
     }
-    res.status(200).json(contact);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
 });
 
-// Update a contact
-router.put('/:id', async (req, res) => {
-  try {
-    const updatedContact = await Contact.findByIdAndUpdate(req.params.id, req.body, { new: true });
-    if (!updatedContact) {
-      return res.status(404).json({ message: 'Contact not found' });
+//Creates a contact
+contact_router.post("/contact/create", async (req, res) => {
+    const { first, last, avatar, notes, twitter, createdAt } = req.body;
+
+    const contact = new Contact({
+        first: first,
+        last: last,
+        avatar: avatar,
+        notes: notes,
+        twitter: twitter,
+        createdAt: createdAt,
+    });
+
+    try {
+        await contact.save().then((contact) => {
+            return res.status(200).json({
+                success: true,
+                message: "Contact saved successfully!",
+                contact: contact,
+            });
+        });
+    } catch (error) {
+        return res.status(400).json({
+            success: false,
+            message: error.message,
+        });
     }
-    res.status(200).json(updatedContact);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
 });
 
-// Delete a contact
-router.delete('/:id', async (req, res) => {
-  try {
-    const deletedContact = await Contact.findByIdAndDelete(req.params.id);
-    if (!deletedContact) {
-      return res.status(404).json({ message: 'Contact not found' });
+//Gets a Contact from id
+contact_router.get("/contact/find/:id", async (req, res) => {
+    try {
+        const id = req.params.id;
+        await Contact.find({ _id: id }).then((contact) => {
+            if (contact.length <= 0) {
+                return res.status(200).json({
+                    success: false,
+                    message: "Contact not found.",
+                });
+            } else {
+                return res.status(200).json({
+                    success: true,
+                    message: "Contact found successfully.",
+                    contact: contact,
+                });
+            }
+        });
+    } catch (error) {
+        return res.status(400).json({
+            success: false,
+            message: error.message,
+        });
     }
-    res.status(200).json({ message: 'Contact deleted successfully' });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
 });
 
-module.exports = router;
+//Update a contact
+contact_router.patch("/contact/edit/:id", async (req, res) => {
+    const id = req.params.id;
+    try {
+        await Contact.findOne({ _id: id }).then(async (contact) => {
+            if (contact) {
+                await Contact.findByIdAndUpdate(
+                    id,
+                    { $set: req.body },
+                    { new: true }
+                ).then((updatedContact) => {
+                    res.status(200).json({
+                        success: true,
+                        message: "Contact updated successfully.",
+                        new_contact: updatedContact,
+                        pre_contact: contact,
+                    });
+                });
+            } else {
+                res.status(200).json({
+                    success: false,
+                    message: "Contact wasn't found",
+                });
+            }
+        });
+    } catch (error) {
+        return res.status(400).json({
+            success: false,
+            message: error.message,
+        });
+    }
+});
 
+// Deletes a Contact
+contact_router.delete("/contact/delete/:id", (req, res) => {
+    const contactId = req.params.id;
+    try {
+        Contact.findByIdAndDelete(contactId).then((deletedContact) => {
+            if (deletedContact) {
+                return res.status(200).json({
+                    success: true,
+                    message: `Contact deleted`,
+                    contact: deletedContact,
+                });
+            } else {
+                return res.status(200).json({
+                    success: false,
+                    message: "Contact wasn't found",
+                });
+            }
+        });
+    } catch (error) {
+        return res.status(400).json({
+            success: false,
+            message: error.message,
+        });
+    }
+});
+
+// exports contact_router as a module for
+module.exports = contact_router
